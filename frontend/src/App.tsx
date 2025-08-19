@@ -4,13 +4,13 @@ import { ConversationalInput } from './components/ConversationalInput';
 import { SwapCard } from './components/SwapCard';
 // import { ConversationHistory } from './components/ConversationHistory';
 import { UnifiedMessage } from './components/UnifiedMessage';
-import { useWallet } from './hooks/useWallet';
+import { useAccount } from '@starknet-react/core';
 import { SwapService } from './utils/swapService';
 import { sendToAgent } from './lib/agentClient';
 import { ChatMessage as ChatMessageType, SwapQuote, UserPreferences } from './types';
 
 function App() {
-  const { wallet } = useWallet();
+  const { address } = useAccount();
   const [messages, setMessages] = useState<ChatMessageType[]>([]);
   const [currentQuote, setCurrentQuote] = useState<SwapQuote | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -50,7 +50,7 @@ function App() {
     try {
       const sessionId = sessionIdRef.current;
       const ctx = {
-        recipient: wallet?.address,
+        recipient: address,
         defaults: { slippage_bps: Math.round((preferences.defaultSlippage || 0.5) * 100) }
       };
       const { messages: agentMsgs } = await sendToAgent(content, sessionId, ctx);
@@ -106,7 +106,7 @@ function App() {
         addMessage({
           id: generateMessageId(),
           type: 'assistant',
-        content: `Swap completed! You received ${parseFloat(quote.toAmount).toFixed(4)} ${quote.toToken.symbol} for ${parseFloat(quote.fromAmount).toFixed(4)} ${quote.fromToken.symbol}. Your tokens should appear in your wallet shortly.`,
+          content: `Swap completed! You received ${parseFloat(quote.toAmount).toFixed(4)} ${quote.toToken.symbol} for ${parseFloat(quote.fromAmount).toFixed(4)} ${quote.fromToken.symbol}. Your tokens should appear in your wallet shortly.`,
           timestamp: new Date(),
           metadata: { transaction: completedTx }
         });

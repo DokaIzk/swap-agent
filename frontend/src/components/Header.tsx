@@ -1,17 +1,25 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Zap, Settings, Wallet, ChevronDown, Copy, ExternalLink, LogOut } from 'lucide-react';
-import { useWallet } from '../hooks/useWallet';
+import { useAccount, useConnect, useDisconnect, useBalance } from '@starknet-react/core';
 
 export const Header: React.FC = () => {
-  const { wallet, isConnecting, connect, disconnect } = useWallet();
+  const { address } = useAccount();
+  const { connect, connectors } = useConnect();
+  const { disconnect } = useDisconnect();
+  const { data: balance } = useBalance({ address });
+  const [showConnectors, setShowConnectors] = useState(false);
   const [showWalletMenu, setShowWalletMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const connectorsRef = useRef<HTMLDivElement>(null);
 
-  // Close menu when clicking outside
+  // Close menus when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setShowWalletMenu(false);
+      }
+      if (connectorsRef.current && !connectorsRef.current.contains(event.target as Node)) {
+        setShowConnectors(false);
       }
     };
 
@@ -22,23 +30,40 @@ export const Header: React.FC = () => {
   }, []);
 
   const copyAddress = () => {
-    if (wallet.address) {
-      navigator.clipboard.writeText(wallet.address);
+    if (address) {
+      navigator.clipboard.writeText(address);
       setShowWalletMenu(false); // Close menu after copying
     }
   };
 
   const WalletButton = () => {
-    if (!wallet.isConnected) {
+    if (!address) {
       return (
-        <button
-          onClick={connect}
-          disabled={isConnecting}
-          className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 disabled:from-gray-600 disabled:to-gray-700 text-white px-4 py-2 rounded-full font-medium text-sm transition-all duration-200 disabled:opacity-50 flex items-center gap-2"
-        >
-          <Wallet className="w-4 h-4" />
-          {isConnecting ? 'Connecting...' : 'Connect Wallet'}
-        </button>
+        <div className="relative" ref={connectorsRef}>
+          <button
+            onClick={() => setShowConnectors(!showConnectors)}
+            className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white px-4 py-2 rounded-full font-medium text-sm transition-all duration-200 flex items-center gap-2"
+          >
+            <Wallet className="w-4 h-4" />
+            Connect Wallet
+          </button>
+          {showConnectors && (
+            <div className="absolute right-0 top-full mt-2 w-60 bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl shadow-xl z-50 p-2">
+              {connectors.map((connector) => (
+                <button
+                  key={connector.id}
+                  onClick={() => {
+                    connect({ connector });
+                    setShowConnectors(false);
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-gray-300 hover:text-white hover:bg-[#2A2A2A] rounded-lg transition-colors"
+                >
+                  Connect {connector.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       );
     }
 
@@ -49,7 +74,7 @@ export const Header: React.FC = () => {
           className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white px-4 py-2 rounded-full font-medium text-sm transition-all duration-200 flex items-center gap-2"
         >
           <Wallet className="w-4 h-4" />
-          {wallet.address?.slice(0, 6)}...{wallet.address?.slice(-4)}
+          {address?.slice(0, 6)}...{address?.slice(-4)}
           <ChevronDown className="w-3 h-3" />
         </button>
 
@@ -57,10 +82,10 @@ export const Header: React.FC = () => {
           <div className="absolute right-0 top-full mt-2 w-64 bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl shadow-xl z-50">
             <div className="p-4 border-b border-[#2A2A2A]">
               <div className="text-white font-medium mb-1">
-                {wallet.address?.slice(0, 6)}...{wallet.address?.slice(-4)}
+                {address?.slice(0, 6)}...{address?.slice(-4)}
               </div>
               <div className="text-gray-400 text-sm">
-                Balance: {wallet.balance} ETH
+                Balance: {balance ? `${parseFloat(balance.formatted).toFixed(4)} ${balance.symbol}` : 'Loading...'}
               </div>
             </div>
             
@@ -75,13 +100,13 @@ export const Header: React.FC = () => {
               
               <button
                 onClick={() => {
-                  window.open(`https://etherscan.io/address/${wallet.address}`, '_blank');
+                  window.open(`https://starkscan.co/contract/${address}`, '_blank');
                   setShowWalletMenu(false);
                 }}
                 className="w-full flex items-center gap-3 px-3 py-2 text-gray-300 hover:text-white hover:bg-[#2A2A2A] rounded-lg transition-colors"
               >
                 <ExternalLink className="w-4 h-4" />
-                View on Explorer
+                View on Starkscan
               </button>
               
               <button
